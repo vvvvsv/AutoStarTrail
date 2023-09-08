@@ -1,7 +1,7 @@
 import sys
 import os
 from PyQt5.QtWidgets import QApplication, QWidget, QProgressBar, QPushButton, \
-    QGridLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox
+    QGridLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox, QFileDialog
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtCore import Qt
@@ -17,22 +17,28 @@ class Window(QWidget):
     def __init__(self):
         super().__init__()
         self.thread = None
-
+        self.input_filepathes = []
+        self.output_path = None
+        self.output_filepath = None
+        self.decay = None
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("AutoStarTrail")
-        self.resize(700, 400)
+        self.resize(700, 350)
         main_layout = QGridLayout()
         self.setLayout(main_layout)
 
-        self.input_button = QPushButton("导入文件夹")
+        self.input_button = QPushButton("导入文件")
         main_layout.addWidget(self.input_button, 0, 0, 1, 2)
+        self.input_button.clicked.connect(self.__open_input_folder)
         self.input_label = QLabel("您已导入 0 张图片（支持.jpg .jpeg .png .bmp）")
         main_layout.addWidget(self.input_label, 0, 2, 1, 2)
 
-        self.output_button = QPushButton("导出文件夹")
+        self.output_button = QPushButton("导出文件位置")
         main_layout.addWidget(self.output_button, 1, 0, 1, 2)
+        self.output_button.clicked.connect(self.__open_output_folder)
+
         self.output_label = QLabel("您将要导出到：")
         self.output_label.setWordWrap(True)
         main_layout.addWidget(self.output_label, 1, 2, 1, 2)
@@ -51,6 +57,7 @@ class Window(QWidget):
         doubleVal.setDecimals(5)
         self.decay_line_edit = QLineEdit()
         self.decay_line_edit.setPlaceholderText("请填入0到1的小数，以0.9到1.0为佳，数字越大拖尾越长")
+        self.decay_line_edit.setText("1.0")
         self.decay_line_edit.setValidator(doubleVal)
         main_layout.addWidget(self.decay_line_edit, 2, 3)
 
@@ -85,6 +92,39 @@ class Window(QWidget):
         self.progress_bar.setMaximum(100)
         self.progress_bar.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(self.progress_bar, 6, 0, 1, 4)
+
+        self.remain_time_label = QLabel("剩余时间：")
+        self.remain_time_label.setAlignment(Qt.AlignTop)
+        main_layout.addWidget(self.remain_time_label, 7, 0, 1, 4)
+
+    def __open_input_folder(self):
+        files, _ = QFileDialog.getOpenFileNames(self,
+                  "导入一个或多个文件",
+                  "./",
+                  "All Files (*);;Image Files (*.jpg *.jpeg *.png *.bmp)")
+
+        self.input_filepathes = []
+
+        image_extensions = [".jpg", ".jpeg", ".png", ".bmp"]
+        image_count = 0
+        # 遍历文件夹中的所有文件
+        for filepath in files:
+            # 获取文件扩展名
+            file_extension = os.path.splitext(filepath)[-1].lower()
+            # 检查是否是图像文件
+            if file_extension in image_extensions:
+                image_count += 1
+                self.input_filepathes.append(filepath)
+
+        # 修改文本
+        self.input_label.setText(f"您已导入 {image_count} 张图片（支持.jpg .jpeg .png .bmp）")
+
+    def __open_output_folder(self):
+        self.output_path = QFileDialog.getExistingDirectory(self,
+                  "选择导出文件位置",
+                  "./")
+        print(self.output_path)
+        self.output_label.setText(f"您将要导出到： {self.output_path}/")
 
 
     def startProgressBar(self):
