@@ -43,7 +43,8 @@ class StarTrail:
         result = None
         result_L = None
 
-        with imageio.get_writer(self.outputpath, fps=25) as video:
+        kargs = {'macro_block_size': 8}
+        with imageio.get_writer(self.outputpath, fps=25, **kargs) as video:
             for i, imgpath in enumerate(self.inputpathes):
                 if i != 0:
                     result = (result * self.decay).astype("uint8")
