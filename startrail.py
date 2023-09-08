@@ -1,6 +1,7 @@
 from PIL import Image
 import numpy as np
 import os
+import imageio
 
 class StarTrail:
     def __init__(self, inputpathes, outputpath, decay):
@@ -31,11 +32,93 @@ class StarTrail:
 
             thread.changeValue.emit((i + 1) / len(self.inputpathes) * 100)
 
+        os.makedirs(os.path.dirname(self.outputpath), exist_ok=True)
         Image.fromarray(result).save(self.outputpath)
         thread.changeValue.emit(-1)
 
     def video(self, thread):
-        pass
+        os.makedirs(os.path.dirname(self.outputpath), exist_ok=True)
+
+        result = None
+        result_L = None
+
+        with imageio.get_writer(self.outputpath, fps=25) as video:
+            for i, imgpath in enumerate(self.inputpathes):
+                if i != 0:
+                    result = (result * self.decay).astype("uint8")
+                    result_L = (result_L * self.decay).astype("uint8")
+
+                img = Image.open(imgpath)
+                img_L = img.convert('L')
+                img = np.array(img)
+                img_L = np.array(img_L)
+
+                if i == 0:
+                    result = img
+                    result_L = img_L
+                else:
+                    idx = img_L > result_L
+                    result[idx] = img[idx]
+                    result_L[idx] = img_L[idx]
+
+                video.append_data(np.array(Image.fromarray(result).convert('RGB')))
+                thread.changeValue.emit((i + 1) / len(self.inputpathes) * 100)
+
+        thread.changeValue.emit(-1)
+        # os.makedirs(os.path.dirname(self.outputpath), exist_ok=True)
+        # fourcc = cv2.VideoWriter_fourcc(*'avc1')
+        # frame_size = Image.open(self.inputpathes[0]).size
+        # videowriter = cv2.VideoWriter(self.outputpath, fourcc, 25, frame_size)
+
+        # result = None
+        # result_L = None
+        # for i, imgpath in enumerate(self.inputpathes):
+        #     if i != 0:
+        #         result = (result * self.decay).astype("uint8")
+        #         result_L = (result_L * self.decay).astype("uint8")
+
+        #     img = Image.open(imgpath)
+        #     img_L = img.convert('L')
+        #     img = np.array(img)
+        #     img_L = np.array(img_L)
+
+        #     if i == 0:
+        #         result = img
+        #         result_L = img_L
+        #     else:
+        #         idx = img_L > result_L
+        #         result[idx] = img[idx]
+        #         result_L[idx] = img_L[idx]
+
+        #     videowriter.write(cv2.cvtColor(result, cv2.COLOR_RGB2BGR))
+        #     thread.changeValue.emit((i + 1) / len(self.inputpathes) * 100)
+
+        # videowriter.release()
+        # thread.changeValue.emit(-1)
 
     def frame(self, thread):
-        pass
+        os.makedirs(self.outputpath, exist_ok=True)
+        result = None
+        result_L = None
+        for i, imgpath in enumerate(self.inputpathes):
+            if i != 0:
+                result = (result * self.decay).astype("uint8")
+                result_L = (result_L * self.decay).astype("uint8")
+
+            img = Image.open(imgpath)
+            img_L = img.convert('L')
+            img = np.array(img)
+            img_L = np.array(img_L)
+
+            if i == 0:
+                result = img
+                result_L = img_L
+            else:
+                idx = img_L > result_L
+                result[idx] = img[idx]
+                result_L[idx] = img_L[idx]
+
+            Image.fromarray(result).save(os.path.join(self.outputpath, f"frame{i+1}.jpg"))
+            thread.changeValue.emit((i + 1) / len(self.inputpathes) * 100)
+
+        thread.changeValue.emit(-1)

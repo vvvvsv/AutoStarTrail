@@ -1,17 +1,15 @@
-import sys
-import os
 from PyQt5.QtWidgets import QApplication, QWidget, QProgressBar, QPushButton, \
-    QGridLayout, QHBoxLayout, QLabel, QLineEdit, QComboBox, QFileDialog, QMessageBox
+    QGridLayout, QLabel, QLineEdit, QFileDialog, QMessageBox
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtCore import Qt
 
 from startrail import StarTrail
 
-from PIL import Image
-import numpy as np
-import time
 import natsort
+import time
+import sys
+import os
 
 class MyThread(QThread):
     # 信号
@@ -25,6 +23,7 @@ class Window(QWidget):
         self.output_path = None
         self.decay = None
         self.output_filepath = None
+        self.start_time = None
         self.initUI()
 
     def initUI(self):
@@ -36,7 +35,7 @@ class Window(QWidget):
         self.input_button = QPushButton("导入文件")
         main_layout.addWidget(self.input_button, 0, 0, 1, 2)
         self.input_button.clicked.connect(self.__open_input_folder)
-        self.input_label = QLabel("您已导入 0 张图片（支持.jpg .jpeg .png .bmp）")
+        self.input_label = QLabel("您已导入0张图片（支持.jpg .jpeg .png .bmp）")
         main_layout.addWidget(self.input_label, 0, 2, 1, 2)
 
         self.output_button = QPushButton("导出文件位置")
@@ -76,7 +75,7 @@ class Window(QWidget):
         tmp_label = QLabel("文件名：")
         main_layout.addWidget(tmp_label, 4, 1)
         self.video_line_edit = QLineEdit()
-        self.video_line_edit.setPlaceholderText("支持.mp4 .avi .flv")
+        self.video_line_edit.setPlaceholderText("支持.mp4，默认帧率25")
         self.video_line_edit.setText("StarTrail.mp4")
         main_layout.addWidget(self.video_line_edit, 4, 2, 1, 2)
 
@@ -120,7 +119,7 @@ class Window(QWidget):
 
         self.input_filepathes = natsort.natsorted(self.input_filepathes, alg=natsort.PATH)
         # 修改文本
-        self.input_label.setText(f"您已导入 {image_count} 张图片（支持.jpg .jpeg .png .bmp）")
+        self.input_label.setText(f"您已导入{image_count}张图片（支持.jpg .jpeg .png .bmp）")
 
     def __open_output_folder(self):
         self.output_path = QFileDialog.getExistingDirectory(self,
@@ -155,7 +154,7 @@ class Window(QWidget):
                     return False
                 filepath = os.path.join(self.output_path, filename)
                 if(os.path.exists(filepath)):
-                    QMessageBox.critical(self, "错误", f"{filename}已存在")
+                    QMessageBox.critical(self, "错误", f"{filename} 已存在！")
                     return False
                 self.output_filepath = filepath
             except:
@@ -165,16 +164,16 @@ class Window(QWidget):
             try:
                 filename = self.video_line_edit.text()
                 file_extension = os.path.splitext(filename)[-1].lower()
-                if file_extension not in [".mp4", ".avi", ".flv"]:
-                    QMessageBox.critical(self, "错误", "支持输出.mp4 .avi .flv")
+                if file_extension not in [".mp4"]:
+                    QMessageBox.critical(self, "错误", "支持输出.mp4")
                     return False
                 filepath = os.path.join(self.output_path, filename)
                 if(os.path.exists(filepath)):
-                    QMessageBox.critical(self, "错误", f"{filename}已存在")
+                    QMessageBox.critical(self, "错误", f"{filename} 已存在！")
                     return False
                 self.output_filepath = filepath
             except:
-                QMessageBox.critical(self, "错误", "支持输出.mp4 .avi .flv")
+                QMessageBox.critical(self, "错误", "支持输出.mp4")
                 False
         elif mode == 'frame':
             self.output_filepath = os.path.join(self.output_path, self.frame_line_edit.text())
@@ -198,6 +197,7 @@ class Window(QWidget):
 
     def __output_postprocess(self):
         self.progress_bar.setValue(0)
+        self.remain_time_label.setText("剩余时间：")
         self.input_button.setDisabled(False)
         self.output_button.setDisabled(False)
         self.decay_line_edit.setDisabled(False)
@@ -233,7 +233,21 @@ class Window(QWidget):
             self.__output_postprocess()
         else:
             self.progress_bar.setValue(val)
-
+            if val > 0:
+                eta = (time.time() - self.start_time) / val * (100 - val) + 3
+                eta = int(eta)
+                hours = eta // 3600
+                eta -= hours * 3600
+                mins = eta // 60
+                eta -= mins * 60
+                secs = eta
+                outstr = "剩余时间："
+                if(hours != 0):
+                    outstr += str(hours) + "小时"
+                if(mins != 0):
+                    outstr += str(mins) + "分钟"
+                outstr += str(secs) + "秒"
+                self.remain_time_label.setText(outstr)
 
     def __star_trail_with_thread(self, mode):
         self.thread = MyThread()
@@ -245,6 +259,7 @@ class Window(QWidget):
             self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).frame(self.thread)
         self.thread.changeValue.connect(lambda val: self.handle_signal(val))
         self.thread.start()
+        self.start_time = time.time()
 
 if __name__ == "__main__":
     App = QApplication(sys.argv)
