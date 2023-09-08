@@ -6,8 +6,12 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtGui import QDoubleValidator
 from PyQt5.QtCore import Qt
 
+from startrail import StarTrail
+
 from PIL import Image
 import numpy as np
+import time
+import natsort
 
 class MyThread(QThread):
     # 信号
@@ -19,14 +23,13 @@ class Window(QWidget):
         self.thread = None
         self.input_filepathes = []
         self.output_path = None
-        self.num_threads = None
         self.decay = None
         self.output_filepath = None
         self.initUI()
 
     def initUI(self):
         self.setWindowTitle("AutoStarTrail")
-        self.resize(700, 350)
+        self.resize(600, 350)
         main_layout = QGridLayout()
         self.setLayout(main_layout)
 
@@ -44,13 +47,8 @@ class Window(QWidget):
         self.output_label.setWordWrap(True)
         main_layout.addWidget(self.output_label, 1, 2, 1, 2)
 
-        tmp_label = QLabel("线程数：")
-        main_layout.addWidget(tmp_label, 2, 0)
-        self.threads_combo_box = QComboBox()
-        self.threads_combo_box.addItems([str(i) for i in range(1,9)])
-        main_layout.addWidget(self.threads_combo_box, 2, 1)
         tmp_label = QLabel("衰减：")
-        main_layout.addWidget(tmp_label, 2, 2)
+        main_layout.addWidget(tmp_label, 2, 0)
 
         doubleVal = QDoubleValidator()
         doubleVal.setRange(0.0,1.0)
@@ -60,7 +58,7 @@ class Window(QWidget):
         self.decay_line_edit.setPlaceholderText("请填入0到1的小数，以0.9到1.0为佳，数字越大星轨拖尾越长")
         self.decay_line_edit.setText("1.0")
         self.decay_line_edit.setValidator(doubleVal)
-        main_layout.addWidget(self.decay_line_edit, 2, 3)
+        main_layout.addWidget(self.decay_line_edit, 2, 1, 1, 3)
 
         self.image_button = QPushButton("导出图片")
         main_layout.addWidget(self.image_button, 3, 0)
@@ -120,6 +118,7 @@ class Window(QWidget):
                 image_count += 1
                 self.input_filepathes.append(filepath)
 
+        self.input_filepathes = natsort.natsorted(self.input_filepathes, alg=natsort.PATH)
         # 修改文本
         self.input_label.setText(f"您已导入 {image_count} 张图片（支持.jpg .jpeg .png .bmp）")
 
@@ -137,7 +136,6 @@ class Window(QWidget):
         if self.output_path is None:
             QMessageBox.information(self, "错误", "未设置导出文件位置！")
             return False
-        self.num_threads = int(self.threads_combo_box.currentText())
         self.decay = self.decay_line_edit.text()
         try:
             self.decay = float(self.decay)
@@ -187,16 +185,35 @@ class Window(QWidget):
         return True
 
     def __output_preprocess(self):
-        pass
+        self.input_button.setDisabled(True)
+        self.output_button.setDisabled(True)
+        self.decay_line_edit.setDisabled(True)
+        self.image_button.setDisabled(True)
+        self.image_line_edit.setDisabled(True)
+        self.video_button.setDisabled(True)
+        self.video_line_edit.setDisabled(True)
+        self.frame_button.setDisabled(True)
+        self.frame_line_edit.setDisabled(True)
 
     def __output_postprocess(self):
-        pass
+        self.input_button.setDisabled(False)
+        self.output_button.setDisabled(False)
+        self.decay_line_edit.setDisabled(False)
+        self.image_button.setDisabled(False)
+        self.image_line_edit.setDisabled(False)
+        self.video_button.setDisabled(False)
+        self.video_line_edit.setDisabled(False)
+        self.frame_button.setDisabled(False)
+        self.frame_line_edit.setDisabled(False)
+
 
     def __output_image(self):
         if not self.__output_ok("image"):
             return
         print("ok")
-        pass
+        self.__output_preprocess()
+        self.star_trail_with_thread("image")
+        self.__output_postprocess()
 
         # self.__disable_buttons()
         # self.root.overrideredirect(True)
@@ -210,11 +227,9 @@ class Window(QWidget):
         if not self.__output_ok("video"):
             return
         print("ok")
-        pass
-        # if not self.__pathes_ok():
-        #     return
-        # if not self.__decay_ok():
-        #     return
+        self.__output_preprocess()
+        self.star_trail_with_thread("video")
+        self.__output_postprocess()
 
         # self.__disable_buttons()
         # StarTrail(self.root, self.progress_bar).video(self.input_filepathes, self.output_filepath, int(self.threads_combo_box.get()), self.decay)
@@ -224,53 +239,25 @@ class Window(QWidget):
         if not self.__output_ok("frame"):
             return
         print("ok")
-        pass
-        # if not self.__pathes_ok():
-        #     return
-        # if not self.__decay_ok():
-        #     return
+        self.__output_preprocess()
+        self.star_trail_with_thread("frame")
+        self.__output_postprocess()
 
         # self.__disable_buttons()
         # StarTrail(self.root, self.progress_bar).frame(self.input_filepathes, self.output_filepath, int(self.threads_combo_box.get()), self.decay)
         # self.__enable_buttons()
 
 
-    def startProgressBar(self):
-        self.DoWithThread(self.progressbar)
-
-    def DoWithThread(self, progressbar: QProgressBar):
+    def star_trail_with_thread(self, mode):
         self.thread = MyThread()
-        self.thread.run = lambda: self.ThreadRun(self.thread)
-        self.thread.changeValue.connect(lambda val: progressbar.setValue(val))
+        if mode == 'image':
+            self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).image(self.thread)
+        elif mode == 'video':
+            self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).video(self.thread)
+        elif mode == 'frame':
+            self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).frame(self.thread)
+        self.thread.changeValue.connect(lambda val: self.progress_bar.setValue(val))
         self.thread.start()
-
-    def ThreadRun(self, thread):
-        dirpath = "LR导出"
-        startid = 7939
-        endid = 8155
-        stride = 10000
-        os.makedirs("max_output", exist_ok=True)
-        result = None
-        result_L = None
-        for i in range(startid, endid+1):
-            imgpath = os.path.join(dirpath, f"IMG_{i}.jpg")
-            img = Image.open(imgpath)
-            img_L = img.convert('L')
-            img = np.array(img)
-            img_L = np.array(img_L)
-
-            if ((i - startid) % stride == 0):
-                result = img
-                result_L = img_L
-            else:
-                idx = img_L > result_L
-                result[idx] = img[idx]
-                result_L[idx] = img_L[idx]
-
-            if ((i + 1 - startid) % stride == 0) or (i == endid):
-                Image.fromarray(result).save(f"max_output/IMG_{i}.jpg")
-            thread.changeValue.emit(i-startid+1)
-
 
 if __name__ == "__main__":
     App = QApplication(sys.argv)
