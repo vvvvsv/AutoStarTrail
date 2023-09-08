@@ -131,19 +131,19 @@ class Window(QWidget):
     # mode 为 "image", "video", or "frame"
     def __output_ok(self, mode):
         if(len(self.input_filepathes) == 0):
-            QMessageBox.information(self, "错误", "未导入图片！")
+            QMessageBox.critical(self, "错误", "未导入图片！")
             return False
         if self.output_path is None:
-            QMessageBox.information(self, "错误", "未设置导出文件位置！")
+            QMessageBox.critical(self, "错误", "未设置导出文件位置！")
             return False
         self.decay = self.decay_line_edit.text()
         try:
             self.decay = float(self.decay)
             if(self.decay < 0 or self.decay > 1):
-                QMessageBox.information(self, "错误", "衰减值应为0到1的小数，以0.9到1.0为佳，数字越大星轨拖尾越长")
+                QMessageBox.critical(self, "错误", "衰减值应为0到1的小数，以0.9到1.0为佳，数字越大星轨拖尾越长")
                 return False
         except ValueError:
-            QMessageBox.information(self, "错误", "衰减值应为0到1的小数，以0.9到1.0为佳，数字越大星轨拖尾越长")
+            QMessageBox.critical(self, "错误", "衰减值应为0到1的小数，以0.9到1.0为佳，数字越大星轨拖尾越长")
             return False
 
         if mode == 'image':
@@ -151,40 +151,41 @@ class Window(QWidget):
                 filename = self.image_line_edit.text()
                 file_extension = os.path.splitext(filename)[-1].lower()
                 if file_extension not in [".jpg", ".jpeg", ".png", ".bmp"]:
-                    QMessageBox.information(self, "错误", "支持输出.jpg .jpeg .png .bmp")
+                    QMessageBox.critical(self, "错误", "支持输出.jpg .jpeg .png .bmp")
                     return False
                 filepath = os.path.join(self.output_path, filename)
                 if(os.path.exists(filepath)):
-                    QMessageBox.information(self, "错误", f"{filename}已存在")
+                    QMessageBox.critical(self, "错误", f"{filename}已存在")
                     return False
                 self.output_filepath = filepath
             except:
-                QMessageBox.information(self, "错误", "支持输出.jpg .jpeg .png .bmp")
+                QMessageBox.critical(self, "错误", "支持输出.jpg .jpeg .png .bmp")
                 False
         elif mode == 'video':
             try:
                 filename = self.video_line_edit.text()
                 file_extension = os.path.splitext(filename)[-1].lower()
                 if file_extension not in [".mp4", ".avi", ".flv"]:
-                    QMessageBox.information(self, "错误", "支持输出.mp4 .avi .flv")
+                    QMessageBox.critical(self, "错误", "支持输出.mp4 .avi .flv")
                     return False
                 filepath = os.path.join(self.output_path, filename)
                 if(os.path.exists(filepath)):
-                    QMessageBox.information(self, "错误", f"{filename}已存在")
+                    QMessageBox.critical(self, "错误", f"{filename}已存在")
                     return False
                 self.output_filepath = filepath
             except:
-                QMessageBox.information(self, "错误", "支持输出.mp4 .avi .flv")
+                QMessageBox.critical(self, "错误", "支持输出.mp4 .avi .flv")
                 False
         elif mode == 'frame':
             self.output_filepath = os.path.join(self.output_path, self.frame_line_edit.text())
             if(os.path.exists(self.output_filepath) and len(os.listdir(self.output_filepath)) != 0):
-                QMessageBox.information(self, "错误", "导出文件夹非空！")
+                QMessageBox.critical(self, "错误", "导出文件夹非空！")
                 self.output_filepath = None
                 return False
         return True
 
     def __output_preprocess(self):
+        self.progress_bar.setValue(0)
         self.input_button.setDisabled(True)
         self.output_button.setDisabled(True)
         self.decay_line_edit.setDisabled(True)
@@ -196,6 +197,7 @@ class Window(QWidget):
         self.frame_line_edit.setDisabled(True)
 
     def __output_postprocess(self):
+        self.progress_bar.setValue(0)
         self.input_button.setDisabled(False)
         self.output_button.setDisabled(False)
         self.decay_line_edit.setDisabled(False)
@@ -206,49 +208,34 @@ class Window(QWidget):
         self.frame_button.setDisabled(False)
         self.frame_line_edit.setDisabled(False)
 
-
     def __output_image(self):
         if not self.__output_ok("image"):
             return
-        print("ok")
         self.__output_preprocess()
-        self.star_trail_with_thread("image")
-        self.__output_postprocess()
-
-        # self.__disable_buttons()
-        # self.root.overrideredirect(True)
-        # # self.root.attributes('-disabled', True)
-        # StarTrail(self.root, self.progress_bar).image(self.input_filepathes, self.output_filepath, int(self.threads_combo_box.get()))
-        # # self.root.attributes('-disabled', False)
-        # self.root.overrideredirect(False)
-        # self.__enable_buttons()
+        self.__star_trail_with_thread("image")
 
     def __output_video(self):
         if not self.__output_ok("video"):
             return
-        print("ok")
         self.__output_preprocess()
-        self.star_trail_with_thread("video")
-        self.__output_postprocess()
-
-        # self.__disable_buttons()
-        # StarTrail(self.root, self.progress_bar).video(self.input_filepathes, self.output_filepath, int(self.threads_combo_box.get()), self.decay)
-        # self.__enable_buttons()
+        self.__star_trail_with_thread("video")
 
     def __output_frame(self):
         if not self.__output_ok("frame"):
             return
-        print("ok")
         self.__output_preprocess()
-        self.star_trail_with_thread("frame")
-        self.__output_postprocess()
+        self.__star_trail_with_thread("frame")
 
-        # self.__disable_buttons()
-        # StarTrail(self.root, self.progress_bar).frame(self.input_filepathes, self.output_filepath, int(self.threads_combo_box.get()), self.decay)
-        # self.__enable_buttons()
+    def handle_signal(self, val):
+        if val == -1:
+            # 线程结束
+            QMessageBox.information(self, "完成", "导出完成")
+            self.__output_postprocess()
+        else:
+            self.progress_bar.setValue(val)
 
 
-    def star_trail_with_thread(self, mode):
+    def __star_trail_with_thread(self, mode):
         self.thread = MyThread()
         if mode == 'image':
             self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).image(self.thread)
@@ -256,7 +243,7 @@ class Window(QWidget):
             self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).video(self.thread)
         elif mode == 'frame':
             self.thread.run = lambda: StarTrail(self.input_filepathes, self.output_filepath, self.decay).frame(self.thread)
-        self.thread.changeValue.connect(lambda val: self.progress_bar.setValue(val))
+        self.thread.changeValue.connect(lambda val: self.handle_signal(val))
         self.thread.start()
 
 if __name__ == "__main__":
@@ -264,4 +251,3 @@ if __name__ == "__main__":
     window = Window()
     window.show()
     sys.exit(App.exec_())
-
