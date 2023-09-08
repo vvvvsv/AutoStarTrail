@@ -127,7 +127,7 @@ class Window(QWidget):
                   "./")
         self.output_label.setText(f"您将要导出到： {self.output_path}/")
 
-    # mode 为 "image", "video", or "frame"
+    # mode is "image", "video", or "frame"
     def __output_ok(self, mode):
         if(len(self.input_filepathes) == 0):
             QMessageBox.critical(self, "错误", "未导入图片！")
@@ -249,6 +249,7 @@ class Window(QWidget):
                 outstr += str(secs) + "秒"
                 self.remain_time_label.setText(outstr)
 
+    # mode is "image", "video", or "frame"
     def __star_trail_with_thread(self, mode):
         self.thread = MyThread()
         if mode == 'image':

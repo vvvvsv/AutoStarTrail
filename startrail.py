@@ -3,6 +3,7 @@ import numpy as np
 import os
 import imageio
 
+# 使用最大值堆栈
 class StarTrail:
     def __init__(self, inputpathes, outputpath, decay):
         self.inputpathes = inputpathes
