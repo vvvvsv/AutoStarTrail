@@ -18,4 +18,4 @@
 
 ### 详细教程
 
-见B站视频 [还没发呢](https://www.bilibili.com/)
+见B站视频 [PR 导出星轨视频太慢？AutoStarTrail 助你快速合成星轨图片和视频！](https://www.bilibili.com/video/BV1vN4y1Q7im)
