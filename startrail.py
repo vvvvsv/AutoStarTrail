@@ -1,7 +1,7 @@
 from PIL import Image
 import numpy as np
 import os
-import imageio
+from imageio import get_writer
 
 # 使用最大值堆栈
 class StarTrail:
@@ -44,7 +44,7 @@ class StarTrail:
         result_L = None
 
         kargs = {'macro_block_size': 8}
-        with imageio.get_writer(self.outputpath, fps=25, **kargs) as video:
+        with get_writer(self.outputpath, fps=25, **kargs) as video:
             for i, imgpath in enumerate(self.inputpathes):
                 if i != 0:
                     result = (result * self.decay).astype("uint8")

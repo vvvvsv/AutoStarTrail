@@ -1,10 +1,11 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QProgressBar, QPushButton, \
     QGridLayout, QLabel, QLineEdit, QFileDialog, QMessageBox
 from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtGui import QDoubleValidator
+from PyQt5.QtGui import QDoubleValidator, QIcon
 from PyQt5.QtCore import Qt
 
 from startrail import StarTrail
+import icons_rc
 
 import natsort
 import time
@@ -28,6 +29,7 @@ class Window(QWidget):
 
     def initUI(self):
         self.setWindowTitle("AutoStarTrail")
+        self.setWindowIcon(QIcon(':/image/ico.ico'))
         self.resize(600, 350)
         main_layout = QGridLayout()
         self.setLayout(main_layout)
@@ -101,7 +103,7 @@ class Window(QWidget):
     def __open_input_folder(self):
         files, _ = QFileDialog.getOpenFileNames(self,
                   "导入一个或多个文件",
-                  "./",
+                  "",
                   "All Files (*);;Image Files (*.jpg *.jpeg *.png *.bmp)")
 
         self.input_filepathes = []
@@ -124,7 +126,7 @@ class Window(QWidget):
     def __open_output_folder(self):
         self.output_path = QFileDialog.getExistingDirectory(self,
                   "选择导出文件位置",
-                  "./")
+                  "")
         self.output_label.setText(f"您将要导出到： {self.output_path}/")
 
     # mode is "image", "video", or "frame"
